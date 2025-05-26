@@ -112,7 +112,7 @@ def build_generators(X_train, X_val, y_train, y_val, data, labels) -> tuple[Imag
 
     return train_generator, val_generator
 
-def build_cnn_model(train_generator, val_generator) -> tf.keras.Model:
+def build_cnn_model(train_generator, val_generator) -> tuple[tf.keras.Model, dict]:
     """
     Build the CNN model
     Returns:
@@ -148,14 +148,14 @@ def build_cnn_model(train_generator, val_generator) -> tf.keras.Model:
     early_stopping = EarlyStopping(monitor='val_loss', patience=15, restore_best_weights=True)
     lr_reduction = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=3, min_lr=1e-6)
 
-    model.fit(
+    history = model.fit(
         train_generator,
         epochs=40,
         validation_data=val_generator,  
         callbacks=[early_stopping, lr_reduction]
     )
 
-    return model
+    return (model, history)
 
 def print_test_data_evaluation(model: tf.keras.Model, X_train: np.ndarray, y_train: np.ndarray, X_val: np.ndarray, y_val: np.ndarray):
     """
@@ -182,10 +182,8 @@ def build_model(model_filename: str):
     X_train, X_val, y_train, y_val = train_test_split(data, labels, test_size=0.2, random_state=42)
     train_generator, val_generator = build_generators(X_train, X_val, y_train, y_val, data, labels)
 
-    model = build_cnn_model(train_generator, val_generator)
+    model, _ = build_cnn_model(train_generator, val_generator)
     print_test_data_evaluation(model, X_train, y_train, X_val, y_val)
-    # Test data evaluation: loss=0.9157, accuracy=0.8000
-    # Train data evaluation: loss=1.0124, accuracy=0.6316
 
     model.save(f'./{model_filename}')
     click.echo(f"Model saved to {model_filename}")

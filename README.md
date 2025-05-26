@@ -10,6 +10,10 @@ python3.12 -m venv venv
 . venv/bin/activate
 
 pip install -r requirements.txt
+
+# There is notebook file with the model summary and the data visualization.
+./venv/bin/jupyter notebook
+# ... and then open CNN Visualization.ipynb file
 ```
 
 ## How to build a model
@@ -22,3 +26,14 @@ python build_model.py
 ```
 python predict_pet_expression.py <image_filename>
 ```
+
+## Dataset and model data
+
+#### Categories:
+![Categories](img/categories.png)
+
+### Training and Validation Accuracy
+
+![Accuracy](img/accuracy.png)
+
+There is EarlyStopping and ReduceLROnPlateau callbacks used, so on accuracy 0.8 the model stops training.
