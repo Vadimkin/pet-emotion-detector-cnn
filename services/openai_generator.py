@@ -5,7 +5,6 @@ from openai import OpenAI
 import constants
 
 client = OpenAI(
-    # This is the default and can be omitted
     api_key=constants.OPENAI_API_KEY,
 )
 
@@ -14,12 +13,12 @@ logger = logging.getLogger(__name__)
 
 def build_poem(pet_expression: str | None) -> str:
     """Build a cute poem based on the pet's expression."""
-    prompt = f"Згенеруй смішний невеликий вірш"
+    prompt = f"Згенеруй невелике хоку"
 
     if pet_expression:
         prompt += f" про {pet_expression} тваринку, але не акцентуй увагу, яка саме тварина на фото, а просто про її емоцію."
     else:
-        prompt += ", про людину, яка завантажує незрозумілі зображення замість фото тварини."
+        prompt += " про людину, яка завантажує незрозумілі зображення замість фото тварини."
 
     logger.info(f"Generated prompt: {prompt}")
 

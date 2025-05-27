@@ -5,8 +5,8 @@ from telegram import ForceReply, Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
 import constants
-from expression_predictor import predict_pet_expression
-from openai_generator import build_poem
+from services.expression_predictor import predict_pet_expression
+from services.openai_generator import build_poem
 
 # Enable logging
 logging.basicConfig(

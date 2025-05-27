@@ -1,3 +1,5 @@
+import os
+
 try:
     from config import *
 except ImportError:
@@ -10,4 +12,5 @@ LABEL_TO_INDEX = {
     "angry": 2
 }
 
-MODEL_FILENAME = "model.keras"
+CURRENT_PATH = os.path.dirname(os.path.abspath(__file__))
+MODEL_FILENAME = f"{CURRENT_PATH}/model.keras"
