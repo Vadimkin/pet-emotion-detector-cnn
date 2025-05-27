@@ -54,7 +54,9 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             expression, probability = predict_pet_expression(fp.name)
 
         # Reply with a cute message
-        message = f"{build_poem(expression)}\r\n--\r\nExpression: {expression} ({probability:.2f})"
+        probability_str = f"{probability:.2f}" if probability is not None else "unknown"
+        poem = build_poem(expression) or "Sorry, I couldn't generate a poem this time."
+        message = f"{poem}\r\n--\r\nExpression: {expression} ({probability_str})"
         await update.message.reply_text(message)
     else:
         await update.message.reply_text("Please send a photo of your pet!")

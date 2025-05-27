@@ -6,14 +6,12 @@ client = OpenAI(
     api_key=constants.OPENAI_API_KEY,
 )
 
-def build_poem(pet_expression: str | None) -> str:
+def build_poem(pet_expression: str | None) -> str | None:
     """Build a cute poem based on the pet's expression."""
-    prompt = f"Згенеруй невелике хоку"
+    if not pet_expression:
+        return None
 
-    if pet_expression:
-        prompt += f" про {pet_expression} тваринку, але не акцентуй увагу, яка саме тварина на фото, а просто про її емоцію."
-    else:
-        prompt += " про людину, яка завантажує незрозумілі зображення замість фото тварини."
+    prompt = f"Згенеруй невелике хоку про {pet_expression} тваринку, але не акцентуй увагу, яка саме тварина на фото, а просто про її емоцію."
 
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
