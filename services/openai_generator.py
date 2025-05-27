@@ -1,5 +1,3 @@
-import logging
-
 from openai import OpenAI
 
 import constants
@@ -7,9 +5,6 @@ import constants
 client = OpenAI(
     api_key=constants.OPENAI_API_KEY,
 )
-
-logger = logging.getLogger(__name__)
-
 
 def build_poem(pet_expression: str | None) -> str:
     """Build a cute poem based on the pet's expression."""
@@ -19,8 +14,6 @@ def build_poem(pet_expression: str | None) -> str:
         prompt += f" про {pet_expression} тваринку, але не акцентуй увагу, яка саме тварина на фото, а просто про її емоцію."
     else:
         prompt += " про людину, яка завантажує незрозумілі зображення замість фото тварини."
-
-    logger.info(f"Generated prompt: {prompt}")
 
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
