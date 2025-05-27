@@ -217,3 +217,4 @@ pip-selfcheck.json
 
 model.keras
 __pycache__/
+config.py

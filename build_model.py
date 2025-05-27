@@ -6,14 +6,14 @@ from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import ReduceLROnPlateau, EarlyStopping
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, BatchNormalization, Dropout
-import matplotlib.pyplot as plt
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, BatchNormalization, Dropout, GlobalAveragePooling2D
 import os
 from sklearn.model_selection import train_test_split
 import click
 import kagglehub
 
 import constants
+
 
 def download_dataset() -> str:
     """
@@ -22,6 +22,7 @@ def download_dataset() -> str:
     path = kagglehub.dataset_download("anshtanwar/pets-facial-expression-dataset")
     click.echo(f"Path to dataset files: {path}")
     return path
+
 
 def build_labeled_images(path: str) -> dict[str, list[np.ndarray]]:
     """
@@ -48,6 +49,7 @@ def build_labeled_images(path: str) -> dict[str, list[np.ndarray]]:
     # Order matters, see constants.LABEL_TO_INDEX
     return labeled_images
 
+
 def resize(labeled_images: dict[str, list[np.ndarray]]) -> tuple[np.ndarray, np.ndarray]:
     """
     Resize the images to the input shape
@@ -55,26 +57,38 @@ def resize(labeled_images: dict[str, list[np.ndarray]]) -> tuple[np.ndarray, np.
         data: np.ndarray - Array of resized images
         labels: np.ndarray - Array of labels
     """
-    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalcatface_extended.xml')
+    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalcatface.xml')
 
     data = []
     labels = []
+
+    found_face, not_found_face = 0, 0
+
     for label, image_list in labeled_images.items():
         for image in image_list:
             gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
             faces = face_cascade.detectMultiScale(gray_image, scaleFactor=1.1, minNeighbors=5)
-            
+
             if len(faces) > 0:
                 (x, y, w, h) = faces[0]
-                cropped_face = image[y:y+h, x:x+w]
+                cropped_face = image[y:y + h, x:x + w]
                 resized_face = cv2.resize(cropped_face, (128, 128))
                 data.append(resized_face)
                 labels.append(constants.LABEL_TO_INDEX[label])
+                found_face += 1
+            else:
+                not_found_face += 1
+                resized_face = cv2.resize(image, (128, 128))
+                data.append(resized_face)
+                labels.append(constants.LABEL_TO_INDEX[label])
 
-    data = np.array(data) / 255.0 
+    print(f"Found faces: {found_face}, Not found faces: {not_found_face}")
+
+    data = np.array(data) / 255.0
 
     labels = np.array(labels)
     return data, labels
+
 
 def build_generators(X_train, X_val, y_train, y_val, data, labels) -> tuple[ImageDataGenerator, ImageDataGenerator]:
     """
@@ -95,11 +109,11 @@ def build_generators(X_train, X_val, y_train, y_val, data, labels) -> tuple[Imag
 
     train_generator = train_datagen.flow(X_train, y_train, batch_size=32)
     val_datagen = ImageDataGenerator(rotation_range=40,
-        height_shift_range=0.2,
-        shear_range=0.2,
-        horizontal_flip=True,
-        fill_mode='nearest'
-    )  
+                                     height_shift_range=0.2,
+                                     shear_range=0.2,
+                                     horizontal_flip=True,
+                                     fill_mode='nearest'
+                                     )
     val_generator = val_datagen.flow(X_val, y_val, batch_size=32)
 
     # test_datagen = ImageDataGenerator(rotation_range=40,
@@ -112,37 +126,28 @@ def build_generators(X_train, X_val, y_train, y_val, data, labels) -> tuple[Imag
 
     return train_generator, val_generator
 
-def build_cnn_model(train_generator, val_generator) -> tuple[tf.keras.Model, dict]:
+
+def build_model(train_generator, val_generator) -> tuple[tf.keras.Model, dict]:
     """
-    Build the CNN model
+    Build the model
     Returns:
-        model: tf.keras.Model - The CNN model
+        model: tf.keras.Model - The model
     """
+    ResNet50V2 = tf.keras.applications.ResNet50V2(
+        input_shape=(128, 128, 3),
+        include_top=False,
+        weights='imagenet'
+    )
+
     model = Sequential([
-        Conv2D(64, (3, 3), activation='relu', input_shape=constants.INPUT_SHAPE),
-        BatchNormalization(),
-        Conv2D(64, (3, 3), activation='relu'),
-        MaxPooling2D(pool_size=(2, 2)),
+        ResNet50V2,
+        GlobalAveragePooling2D(),
         Dropout(0.25),
-        
-        Conv2D(128, (3, 3), activation='relu'),
         BatchNormalization(),
-        Conv2D(128, (3, 3), activation='relu'),
-        MaxPooling2D(pool_size=(2, 2)),
-        Dropout(0.25),
-        
-        Conv2D(512, (3, 3), activation='relu'),
-        BatchNormalization(),
-        Conv2D(512, (3, 3), activation='relu'),
-        MaxPooling2D(pool_size=(2, 2)),
-        Dropout(0.25),
-        
-        Flatten(),
-        Dense(512, activation='relu'),
+        Dense(64, activation='relu'),
         Dropout(0.5),
         Dense(4, activation='softmax')
     ])
-
     model.compile(loss='sparse_categorical_crossentropy', optimizer=Adam(learning_rate=0.00015), metrics=['accuracy'])
 
     early_stopping = EarlyStopping(monitor='val_loss', patience=15, restore_best_weights=True)
@@ -150,12 +155,13 @@ def build_cnn_model(train_generator, val_generator) -> tuple[tf.keras.Model, dic
 
     history = model.fit(
         train_generator,
-        epochs=40,
-        validation_data=val_generator,  
+        epochs=20,
+        validation_data=val_generator,
         callbacks=[early_stopping, lr_reduction]
     )
 
     return (model, history)
+
 
 def print_test_data_evaluation(model: tf.keras.Model, X_train: np.ndarray, y_train: np.ndarray, X_val: np.ndarray, y_val: np.ndarray):
     """
@@ -166,13 +172,14 @@ def print_test_data_evaluation(model: tf.keras.Model, X_train: np.ndarray, y_tra
     click.echo(f"Test data evaluation: loss={loss:.4f}, accuracy={accuracy:.4f}")
     click.echo(f"Train data evaluation: loss={losstr:.4f}, accuracy={accuracytr:.4f}")
 
+
 @click.command()
 @click.option("--model_filename", default="model.keras", help="Path to model name to save")
-def build_model(model_filename: str):
+def init(model_filename: str):
     """
-    Build the CNN model
+    Build the model
     Returns:
-        model: tf.keras.Model - The CNN model
+        model: tf.keras.Model - The model
     """
     path = download_dataset()
 
@@ -182,11 +189,12 @@ def build_model(model_filename: str):
     X_train, X_val, y_train, y_val = train_test_split(data, labels, test_size=0.2, random_state=42)
     train_generator, val_generator = build_generators(X_train, X_val, y_train, y_val, data, labels)
 
-    model, _ = build_cnn_model(train_generator, val_generator)
+    model, _ = build_model(train_generator, val_generator)
     print_test_data_evaluation(model, X_train, y_train, X_val, y_val)
 
     model.save(f'./{model_filename}')
     click.echo(f"Model saved to {model_filename}")
 
+
 if __name__ == '__main__':
-    build_model()
+    init()

@@ -7,3 +7,5 @@ matplotlib==3.10.3
 scikit-learn==1.6.1
 opencv-python==4.11.0.86
 click==8.2.1
+python-telegram-bot==22.1
+openai==1.82.0
