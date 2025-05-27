@@ -18,9 +18,9 @@ pip install -r requirements.txt
 python build_model.py
 # You should see created "model.keras" file
 
-cp .env.example .env
-# Put your telegram and openai keys in .env file
-nano .env
+cp config.py.EXAMPLE config.py
+# Put your tg and openai keys in .env file
+nano config.py
 
 # Run the bot
 python run.py
